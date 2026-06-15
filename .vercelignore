@@ -1,7 +1,0 @@
-node_modules/
-.vercel/
-.env*
-modelo-atual-unpacked/
-modelo-atual.xlsx
-modelo-atual.zip
-teste-*.xlsx
