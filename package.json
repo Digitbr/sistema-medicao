@@ -1,0 +1,15 @@
+{
+  "name": "sistema-medicao",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check app.js && node --check api/generate.js && node --check lib/report.js"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
