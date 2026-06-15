@@ -37,7 +37,7 @@ const sidebarOverlay = document.querySelector("#sidebar-overlay");
 const activityCards = [];
 
 const state = {
-  view: "dashboard",
+  view: "report",
   records: [],
   editingRecordId: null,
   config: {
@@ -68,7 +68,7 @@ async function initialize() {
   renderDashboard();
   renderRecords();
   renderOperations();
-  setView("dashboard");
+  setView("report");
   refreshIcons();
 }
 
