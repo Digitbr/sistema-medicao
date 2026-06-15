@@ -1,0 +1,23 @@
+{
+  "name": "sistema-medicao-pro",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sistema de medição fotográfica com exportação para Excel, Word e PowerPoint.",
+  "scripts": {
+    "dev": "npx vercel dev",
+    "check": "node --check app.js && node --check api/generate.js && node --check api/config.js && node --check api/health.js && node --check api/lib/data.js && node --check api/lib/email.js && node --check api/lib/reports.js"
+  },
+  "dependencies": {
+    "docx": "9.7.1",
+    "exceljs": "4.4.0",
+    "nodemailer": "9.0.0",
+    "pptxgenjs": "4.0.1"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
