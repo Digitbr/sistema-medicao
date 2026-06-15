@@ -24,16 +24,14 @@ export default async function handler(request, response) {
     const emailStatus = await sendReportEmail(report);
     const recipient = reportRecipient();
 
-    response.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
+    response.setHeader("Content-Type", report.contentType);
     response.setHeader("Content-Disposition", `attachment; filename="${report.filename}"`);
+    response.setHeader("X-Report-Format", report.format);
     response.setHeader("X-Report-Email", emailStatus);
     response.setHeader("X-Report-Recipient", recipient);
     response.setHeader(
       "Access-Control-Expose-Headers",
-      "Content-Disposition, X-Report-Email, X-Report-Recipient"
+      "Content-Disposition, X-Report-Email, X-Report-Recipient, X-Report-Format"
     );
     response.status(200).send(report.buffer);
   } catch (error) {
@@ -63,7 +61,7 @@ async function sendReportEmail(report) {
           <p><strong>Competência:</strong> ${escapeHtml(report.metadata.competencia)}</p>
           <p><strong>Ordem de serviço:</strong> ${escapeHtml(report.metadata.ordemServico || "Não informada")}</p>
           <p><strong>Tipo de manutenção:</strong> ${escapeHtml(report.metadata.tipoManutencao || "Não informado")}</p>
-          <p>O arquivo Excel está anexado a esta mensagem.</p>
+          <p>O relatório em formato ${escapeHtml(report.formatLabel)} está anexado a esta mensagem.</p>
         `,
         attachments: [
           {

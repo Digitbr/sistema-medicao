@@ -29,6 +29,7 @@ const exportRecordsButton = document.querySelector("#export-records-button");
 const importRecordsButton = document.querySelector("#import-records-button");
 const recordsImportInput = document.querySelector("#records-import-input");
 const reportRecipient = document.querySelector("#report-recipient");
+const reportFormat = document.querySelector("#report-format");
 const currentViewTitle = document.querySelector("#current-view-title");
 const currentDate = document.querySelector("#current-date");
 const sidebar = document.querySelector("#sidebar");
@@ -65,6 +66,7 @@ async function initialize() {
     getServiceConfig()
   ]);
   reportRecipient.textContent = state.config.recipient;
+  updateGenerateButton();
   renderDashboard();
   renderRecords();
   renderOperations();
@@ -284,6 +286,8 @@ function bindRecordFilters() {
 }
 
 function bindRecordActions() {
+  reportFormat.addEventListener("change", updateGenerateButton);
+
   saveRecordButton.addEventListener("click", async () => {
     await saveCurrentRecord();
   });
@@ -316,7 +320,11 @@ function bindRecordActions() {
     }
 
     if (action === "export") {
-      await exportSavedRecord(record, button);
+      await exportSavedRecord(
+        record,
+        button,
+        button.dataset.recordFormat || "excel"
+      );
     }
   });
 
@@ -444,9 +452,9 @@ function resetForm() {
   activityCards.forEach((activity) => activity.reset());
   reportPageTitle.textContent = "Nova medição de serviço";
   reportPageDescription.textContent =
-    "Preencha os dados, registre as atividades e gere o Excel.";
+    "Preencha os dados, registre as atividades e gere o relatório.";
   saveRecordButton.textContent = "Salvar medição";
-  setFormMessage("Salve a medição ou gere o Excel para exportar.");
+  setFormMessage("Salve a medição ou escolha um formato para gerar o relatório.");
 }
 
 function loadRecordIntoForm(record) {
@@ -531,17 +539,19 @@ reportForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const record = await saveCurrentRecord({ silent: true });
   if (!record) return;
-  await exportSavedRecord(record, generateButton);
+  await exportSavedRecord(record, generateButton, reportFormat.value);
 });
 
-async function exportSavedRecord(record, button) {
+async function exportSavedRecord(record, button, format = "excel") {
+  const formatLabel = reportFormatLabel(format);
   button.disabled = true;
-  setFormMessage("Gerando o Excel e preparando a exportação...");
+  setFormMessage(`Gerando ${formatLabel} e preparando a exportação...`);
 
   try {
     const payload = JSON.stringify({
       metadata: record.metadata,
-      activities: record.activities
+      activities: record.activities,
+      format
     });
     if (new Blob([payload]).size > 3.8 * 1024 * 1024) {
       throw new Error(
@@ -557,7 +567,7 @@ async function exportSavedRecord(record, button) {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || "Falha ao gerar a planilha.");
+      throw new Error(error.error || "Falha ao gerar o relatório.");
     }
 
     const emailStatus = response.headers.get("X-Report-Email");
@@ -574,6 +584,7 @@ async function exportSavedRecord(record, button) {
     URL.revokeObjectURL(downloadUrl);
 
     record.lastExportedAt = new Date().toISOString();
+    record.lastExportFormat = format;
     record.updatedAt = record.lastExportedAt;
     await putRecord(record);
     upsertStateRecord(record);
@@ -586,12 +597,12 @@ async function exportSavedRecord(record, button) {
       );
     } else if (emailStatus === "failed") {
       setFormMessage(
-        "Excel baixado, mas o envio por e-mail falhou. Tente novamente.",
+        `${formatLabel} baixado, mas o envio por e-mail falhou. Tente novamente.`,
         "warning"
       );
     } else {
       setFormMessage(
-        "Excel baixado. O envio por e-mail aguarda a configuração do serviço.",
+        `${formatLabel} baixado. O envio por e-mail aguarda a configuração do serviço.`,
         "warning"
       );
     }
@@ -710,7 +721,9 @@ function recordBox(record) {
           <span>${completed} concluída(s) · ${waiting} em espera</span>
           <div>
             <button type="button" class="secondary-action" data-record-action="edit" data-record-id="${escapeAttr(record.id)}">Editar</button>
-            <button type="button" class="secondary-action" data-record-action="export" data-record-id="${escapeAttr(record.id)}">Exportar Excel</button>
+            <button type="button" class="secondary-action" data-record-action="export" data-record-format="excel" data-record-id="${escapeAttr(record.id)}">Excel</button>
+            <button type="button" class="secondary-action" data-record-action="export" data-record-format="word" data-record-id="${escapeAttr(record.id)}">Word</button>
+            <button type="button" class="secondary-action" data-record-action="export" data-record-format="presentation" data-record-id="${escapeAttr(record.id)}">PowerPoint</button>
             <button type="button" class="danger-action" data-record-action="delete" data-record-id="${escapeAttr(record.id)}">Apagar</button>
           </div>
         </div>
@@ -1223,6 +1236,20 @@ function filenameFromResponse(response) {
   const disposition = response.headers.get("Content-Disposition") || "";
   const match = disposition.match(/filename="([^"]+)"/i);
   return match?.[1] || "Relatório Fotográfico.xlsx";
+}
+
+function reportFormatLabel(format) {
+  return {
+    excel: "Excel",
+    word: "Word",
+    presentation: "PowerPoint"
+  }[format] || "relatório";
+}
+
+function updateGenerateButton() {
+  generateButton.textContent = `Salvar e gerar ${reportFormatLabel(
+    reportFormat.value
+  )}`;
 }
 
 function setFormMessage(message, type = "") {

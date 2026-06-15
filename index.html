@@ -121,7 +121,7 @@
             <p class="eyebrow">Manutenção e evidências</p>
             <h1 id="report-page-title">Nova medição de serviço</h1>
             <p id="report-page-description">
-              Preencha os dados, registre as atividades e gere o Excel.
+              Preencha os dados, registre as atividades e gere o relatório.
             </p>
           </div>
           <div class="progress-summary">
@@ -198,10 +198,18 @@
               <span class="email-label">Destino da exportação</span>
               <strong id="report-recipient">comercial1@primecsg.com.br</strong>
               <p id="form-status" role="status">
-                Salve a medição ou gere o Excel para exportar.
+                Salve a medição ou escolha um formato para gerar o relatório.
               </p>
             </div>
             <div class="submit-actions">
+              <label class="export-format-control">
+                <span>Formato do relatório</span>
+                <select id="report-format" aria-label="Formato do relatório">
+                  <option value="excel">Excel (.xlsx)</option>
+                  <option value="word">Word (.docx)</option>
+                  <option value="presentation">PowerPoint (.pptx)</option>
+                </select>
+              </label>
               <button type="button" class="secondary-action" id="reset-record-button">
                 Limpar formulário
               </button>

@@ -8,7 +8,7 @@ export default function handler(request, response) {
   response.status(200).json({
     status: "ok",
     service: "sistema-medicao",
-    version: "1.1.0",
+    version: "1.2.0",
     timestamp: new Date().toISOString()
   });
 }

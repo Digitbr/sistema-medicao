@@ -558,6 +558,21 @@ textarea:focus {
   gap: 8px;
 }
 
+.export-format-control {
+  min-width: 174px;
+}
+
+.export-format-control > span {
+  margin-bottom: 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.export-format-control select {
+  min-height: 42px;
+  padding-block: 8px;
+}
+
 #generate-button {
   min-width: 230px;
   min-height: 46px;
@@ -1093,6 +1108,7 @@ textarea:focus {
 
 .record-actions > div {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 

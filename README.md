@@ -9,7 +9,7 @@ Aplicação web para cadastro, acompanhamento e exportação de medições e rel
 - Registros editáveis, pesquisáveis e organizados em caixas.
 - Backup e restauração do histórico local em JSON.
 - Status de atividades concluídas ou em espera, com motivo obrigatório.
-- Exportação de relatórios em XLSX.
+- Exportação de relatórios em Excel, Word e PowerPoint.
 - Envio opcional do relatório por e-mail usando a Resend.
 
 ## Persistência
@@ -24,7 +24,7 @@ Copie os nomes de `.env.example` para o ambiente da Vercel:
 - `RESEND_API_KEY`: chave da Resend para ativar o envio.
 - `REPORT_FROM_EMAIL`: remetente verificado na Resend.
 
-Sem `RESEND_API_KEY`, o Excel continua sendo gerado e baixado normalmente.
+Sem `RESEND_API_KEY`, o relatório escolhido continua sendo gerado e baixado normalmente.
 
 ## Executar localmente
 
