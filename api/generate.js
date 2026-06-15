@@ -1,6 +1,6 @@
 import { buildReport } from "../lib/report.js";
 
-const RECIPIENT = "comercial1@primecsg.com.br";
+const DEFAULT_RECIPIENT = "comercial1@primecsg.com.br";
 
 export const config = {
   api: {
@@ -18,8 +18,11 @@ export default async function handler(request, response) {
   }
 
   try {
-    const report = await buildReport(request.body);
+    const payload =
+      typeof request.body === "string" ? JSON.parse(request.body) : request.body;
+    const report = await buildReport(payload);
     const emailStatus = await sendReportEmail(report);
+    const recipient = reportRecipient();
 
     response.setHeader(
       "Content-Type",
@@ -27,6 +30,11 @@ export default async function handler(request, response) {
     );
     response.setHeader("Content-Disposition", `attachment; filename="${report.filename}"`);
     response.setHeader("X-Report-Email", emailStatus);
+    response.setHeader("X-Report-Recipient", recipient);
+    response.setHeader(
+      "Access-Control-Expose-Headers",
+      "Content-Disposition, X-Report-Email, X-Report-Recipient"
+    );
     response.status(200).send(report.buffer);
   } catch (error) {
     console.error(error);
@@ -37,39 +45,51 @@ export default async function handler(request, response) {
 async function sendReportEmail(report) {
   if (!process.env.RESEND_API_KEY) return "not-configured";
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from: process.env.REPORT_FROM_EMAIL || "Sistema de Medição <onboarding@resend.dev>",
-      to: [RECIPIENT],
-      subject: `Relatório fotográfico - ${report.metadata.competencia}`,
-      html: `
-        <h2>Relatório fotográfico de manutenção</h2>
-        <p><strong>Competência:</strong> ${escapeHtml(report.metadata.competencia)}</p>
-        <p><strong>Ordem de serviço:</strong> ${escapeHtml(report.metadata.ordemServico || "Não informada")}</p>
-        <p><strong>Tipo de manutenção:</strong> ${escapeHtml(report.metadata.tipoManutencao || "Não informado")}</p>
-        <p>O arquivo Excel está anexado a esta mensagem.</p>
-      `,
-      attachments: [
-        {
-          filename: report.filename,
-          content: report.buffer.toString("base64")
-        }
-      ]
-    })
-  });
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from:
+          process.env.REPORT_FROM_EMAIL ||
+          "Sistema de Medição <onboarding@resend.dev>",
+        to: [reportRecipient()],
+        subject: `Relatório fotográfico - ${report.metadata.competencia}`,
+        html: `
+          <h2>Relatório fotográfico de manutenção</h2>
+          <p><strong>Competência:</strong> ${escapeHtml(report.metadata.competencia)}</p>
+          <p><strong>Ordem de serviço:</strong> ${escapeHtml(report.metadata.ordemServico || "Não informada")}</p>
+          <p><strong>Tipo de manutenção:</strong> ${escapeHtml(report.metadata.tipoManutencao || "Não informado")}</p>
+          <p>O arquivo Excel está anexado a esta mensagem.</p>
+        `,
+        attachments: [
+          {
+            filename: report.filename,
+            content: report.buffer.toString("base64")
+          }
+        ]
+      }),
+      signal: AbortSignal.timeout(12000)
+    });
 
-  if (!response.ok) {
-    const detail = await response.text();
-    console.error("Falha ao enviar e-mail:", detail);
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error("Falha ao enviar e-mail:", detail);
+      return "failed";
+    }
+  } catch (error) {
+    console.error("Falha ao enviar e-mail:", error);
     return "failed";
   }
 
   return "sent";
+}
+
+function reportRecipient() {
+  return process.env.REPORT_RECIPIENT || DEFAULT_RECIPIENT;
 }
 
 function escapeHtml(value) {

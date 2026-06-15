@@ -1,6 +1,7 @@
 node_modules/
 .vercel/
 .env*
+!.env.example
 modelo-atual-unpacked/
 modelo-atual.xlsx
 modelo-atual.zip
