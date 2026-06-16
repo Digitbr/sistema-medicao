@@ -1430,3 +1430,21 @@ function refreshIcons() {
     }
   });
 }
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        premium: {
+          dark: '#0f172a',    // slate-900
+          light: '#f8fafc',   // slate-50
+          border: '#e2e8f0',  // slate-200
+          text: '#334155',    // slate-700
+        },
+      },
+      backgroundImage: {
+        'brand-gradient': 'linear-gradient(135deg, #0f172a 0%, #3b82f6 100%)',
+      }
+    },
+  },
+}
