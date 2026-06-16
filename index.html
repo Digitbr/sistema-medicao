@@ -8,7 +8,7 @@
       content="Geração e envio de relatórios fotográficos de manutenção."
     />
     <title>Sistema de Medição | Relatório Fotográfico</title>
-    <link rel="stylesheet" href="/styles.css?v=20260616-1" />
+    <link rel="stylesheet" href="/styles.css?v=20260616-2" />
   </head>
   <body>
     <div class="app-shell">
@@ -193,6 +193,17 @@
             <div id="activities" class="activities"></div>
           </section>
 
+          <section class="waiting-reminders" id="waiting-reminders" hidden>
+            <div class="section-heading">
+              <span class="step">!</span>
+              <div>
+                <h2>Lembretes de serviços em espera</h2>
+                <p>Itens marcados em espera ficam aqui para o fiscal retomar e concluir depois.</p>
+              </div>
+            </div>
+            <div id="waiting-reminder-list" class="waiting-reminder-list"></div>
+          </section>
+
           <section class="submit-panel">
             <div class="submit-panel__info">
               <span class="email-label">Destino da exportação</span>
@@ -333,7 +344,7 @@
           <div class="form-grid activity-fields">
             <label>
               <span>Data de entrada</span>
-              <input type="date" data-field="dataAntes" />
+              <input type="date" data-field="dataAntes" readonly />
             </label>
             <label>
               <span>Data de saída</span>
@@ -390,12 +401,12 @@
               <input type="hidden" data-field="status" value="concluida" />
             </div>
 
-            <label>
-              <span>Conclusão / motivo</span>
+            <label class="waiting-reason-field" hidden>
+              <span>Motivo da espera</span>
               <textarea
                 data-field="motivo"
                 rows="2"
-                placeholder="Ex.: Vazamento sanado com troca de vedação"
+                placeholder="Explique o que falta para concluir este serviço"
               ></textarea>
             </label>
 
@@ -406,6 +417,6 @@
     </template>
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-    <script src="/app.js?v=20260616-1"></script>
+    <script src="/app.js?v=20260616-2"></script>
   </body>
 </html>

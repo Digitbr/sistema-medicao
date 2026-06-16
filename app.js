@@ -30,6 +30,8 @@ const importRecordsButton = document.querySelector("#import-records-button");
 const recordsImportInput = document.querySelector("#records-import-input");
 const reportRecipient = document.querySelector("#report-recipient");
 const reportFormat = document.querySelector("#report-format");
+const waitingReminders = document.querySelector("#waiting-reminders");
+const waitingReminderList = document.querySelector("#waiting-reminder-list");
 const currentViewTitle = document.querySelector("#current-view-title");
 const currentDate = document.querySelector("#current-date");
 const sidebar = document.querySelector("#sidebar");
@@ -102,6 +104,7 @@ function createActivityCards() {
     const meta = fragment.querySelector(".activity-meta");
     const statusBadge = fragment.querySelector(".activity-status");
     const clearButton = fragment.querySelector(".clear-activity");
+    const waitingReasonField = fragment.querySelector(".waiting-reason-field");
     const statusButtons = [...fragment.querySelectorAll("[data-status]")];
     const fields = Object.fromEntries(
       [...fragment.querySelectorAll("[data-field]")].map((input) => [
@@ -141,6 +144,7 @@ function createActivityCards() {
           : "is-empty"
       }`;
       updateProgress();
+      renderFormWaitingReminders();
     };
 
     const setStatus = (status) => {
@@ -153,13 +157,30 @@ function createActivityCards() {
       fields.motivo.placeholder =
         status === "em-espera"
           ? "Explique por que o problema ficou em espera"
-          : "Descreva a conclusão do serviço realizado";
+          : "";
+      fields.motivo.required = status === "em-espera";
+      waitingReasonField.hidden = status !== "em-espera";
+      if (status !== "em-espera") {
+        fields.motivo.value = "";
+      }
       updateSummary();
+      renderFormWaitingReminders();
+    };
+
+    const lockEntryDate = (value = currentDateInputValue()) => {
+      const lockedDate = value || currentDateInputValue();
+      fields.dataAntes.value = lockedDate;
+      fields.dataAntes.dataset.lockedDate = lockedDate;
+    };
+
+    const restoreEntryDate = () => {
+      fields.dataAntes.value =
+        fields.dataAntes.dataset.lockedDate || currentDateInputValue();
     };
 
     const applyDefaultDates = () => {
       const today = currentDateInputValue();
-      if (!fields.dataAntes.value) fields.dataAntes.value = today;
+      if (!fields.dataAntes.dataset.lockedDate) lockEntryDate();
       if (!fields.dataDepois.value) fields.dataDepois.value = today;
     };
 
@@ -199,6 +220,7 @@ function createActivityCards() {
       for (const field of Object.values(fields)) {
         field.value = field.dataset.field === "status" ? "concluida" : "";
       }
+      delete fields.dataAntes.dataset.lockedDate;
       applyDefaultDates();
       syncMaintenanceType();
       setPhoto("fotoAntes", "");
@@ -208,7 +230,7 @@ function createActivityCards() {
     };
 
     const setData = (activity = {}) => {
-      fields.dataAntes.value = activity.dataAntes || "";
+      lockEntryDate(activity.dataAntes || currentDateInputValue());
       fields.dataDepois.value = activity.dataDepois || "";
       fields.responsavel.value = activity.responsavel || "";
       fields.atividade.value = activity.atividade || "";
@@ -229,12 +251,15 @@ function createActivityCards() {
         photos.fotoDepois
       );
       return {
-        dataAntes: hasMeaningfulData ? fields.dataAntes.value : "",
+        dataAntes: hasMeaningfulData
+          ? fields.dataAntes.dataset.lockedDate || fields.dataAntes.value
+          : "",
         dataDepois: hasMeaningfulData ? fields.dataDepois.value : "",
         responsavel: fields.responsavel.value.trim(),
         atividade: fields.atividade.value.trim(),
         status: fields.status.value,
-        motivo: fields.motivo.value.trim(),
+        motivo:
+          fields.status.value === "em-espera" ? fields.motivo.value.trim() : "",
         fotoAntes: photos.fotoAntes,
         fotoDepois: photos.fotoDepois
       };
@@ -254,6 +279,9 @@ function createActivityCards() {
       field.addEventListener("input", updateSummary);
       field.addEventListener("change", updateSummary);
     }
+
+    fields.dataAntes.addEventListener("input", restoreEntryDate);
+    fields.dataAntes.addEventListener("change", restoreEntryDate);
 
     fields.atividade.addEventListener("input", applyDefaultDates);
     fields.responsavel.addEventListener("input", applyDefaultDates);
@@ -413,6 +441,20 @@ function bindReportForm() {
     syncMaintenanceCards();
     activityCards[0]?.card.classList.add("is-open");
   });
+
+  waitingReminders.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-open-activity]");
+    if (!button) return;
+    const activity = activityCards[Number(button.dataset.openActivity)];
+    if (!activity) return;
+    activity.card.classList.add("is-open");
+    activity.card.scrollIntoView({ behavior: "smooth", block: "center" });
+    const focusTarget =
+      activity.fields.status.value === "em-espera"
+        ? activity.fields.motivo
+        : activity.fields.atividade;
+    focusTarget.focus({ preventScroll: true });
+  });
 }
 
 function exportRecordsBackup() {
@@ -517,6 +559,7 @@ function resetForm() {
   state.editingRecordId = null;
   activityCards.forEach((activity) => activity.reset());
   syncMaintenanceCards();
+  renderFormWaitingReminders();
   reportPageTitle.textContent = "Nova medição de serviço";
   reportPageDescription.textContent =
     "Preencha os dados, registre o problema, adicione as fotos de entrada e saída e gere o relatório.";
@@ -695,6 +738,43 @@ function syncMaintenanceCards() {
   activityCards.forEach((activity) => activity.syncMaintenanceType(currentMaintenanceType()));
 }
 
+function renderFormWaitingReminders() {
+  const waiting = activityCards
+    .map((activity, index) => ({
+      index,
+      atividade: activity.fields.atividade.value.trim(),
+      responsavel: activity.fields.responsavel.value.trim(),
+      motivo: activity.fields.motivo.value.trim(),
+      dataAntes: activity.fields.dataAntes.value,
+      status: activity.fields.status.value
+    }))
+    .filter((activity) => activity.status === "em-espera");
+
+  waitingReminders.hidden = !waiting.length;
+  if (!waiting.length) {
+    waitingReminderList.innerHTML = "";
+    return;
+  }
+
+  waitingReminderList.innerHTML = waiting
+    .map(
+      (activity) => `
+        <article class="waiting-reminder-card">
+          <div>
+            <span>Item ${String(activity.index + 1).padStart(2, "0")} em espera</span>
+            <strong>${escapeHtml(activity.atividade || "Problema não descrito")}</strong>
+            <small>${escapeHtml(activity.responsavel || "Sem responsável")} · Entrada ${formatDate(activity.dataAntes || currentDateInputValue())}</small>
+          </div>
+          <p>${escapeHtml(activity.motivo || "Informe o motivo da espera para salvar o registro.")}</p>
+          <button type="button" class="secondary-action" data-open-activity="${activity.index}">
+            Abrir item
+          </button>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function renderRecords() {
   const search = normalizeText(recordSearch.value);
   const type = recordTypeFilter.value;
@@ -820,7 +900,7 @@ function recordActivity(activity, index) {
         </div>
         <span class="activity-status ${waiting ? "is-waiting" : "is-complete"}">${waiting ? "Em espera" : "Concluída"}</span>
       </div>
-      ${activity.motivo ? `<p><strong>Conclusão/motivo:</strong> ${escapeHtml(activity.motivo)}</p>` : ""}
+      ${activity.motivo ? `<p><strong>Motivo da espera:</strong> ${escapeHtml(activity.motivo)}</p>` : ""}
       ${activity.fotoAntes || activity.fotoDepois ? `
         <div class="saved-photos">
           ${activity.fotoAntes ? `<figure><img src="${escapeAttr(activity.fotoAntes)}" alt="Foto de entrada"><figcaption>Entrada</figcaption></figure>` : ""}

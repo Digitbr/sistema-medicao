@@ -309,6 +309,12 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgb(22 117 169 / 12%);
 }
 
+input[readonly] {
+  background: #f4f7fa;
+  color: #596679;
+  cursor: default;
+}
+
 .activities {
   display: grid;
   gap: 10px;
@@ -546,6 +552,66 @@ textarea:focus {
   color: var(--red);
   font-size: 12px;
   font-weight: 800;
+}
+
+.waiting-reminders {
+  margin-bottom: 16px;
+  border: 1px solid #efd28b;
+  border-radius: 8px;
+  background: #fff9e8;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.waiting-reminders .step {
+  background: var(--amber);
+}
+
+.waiting-reminder-list {
+  display: grid;
+  gap: 10px;
+}
+
+.waiting-reminder-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.8fr) auto;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #efd28b;
+  border-radius: 7px;
+  background: #fff;
+  padding: 14px;
+}
+
+.waiting-reminder-card div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.waiting-reminder-card span {
+  color: var(--amber);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.waiting-reminder-card strong {
+  overflow: hidden;
+  color: var(--navy);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.waiting-reminder-card small,
+.waiting-reminder-card p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.waiting-reminder-card p {
+  margin: 0;
 }
 
 .submit-panel {
@@ -1142,6 +1208,10 @@ textarea:focus {
 
 @media (max-width: 820px) {
   .activity-control {
+    grid-template-columns: 1fr;
+  }
+
+  .waiting-reminder-card {
     grid-template-columns: 1fr;
   }
 
