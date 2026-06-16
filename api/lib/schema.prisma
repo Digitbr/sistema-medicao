@@ -1,0 +1,40 @@
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  nome      String
+  senha     String
+  medicoes  Medicao[]
+  createdAt DateTime  @default(now())
+}
+
+model Medicao {
+  id             String      @id @default(uuid())
+  competencia    String
+  ordemServico   String?
+  contratada     String
+  tipoManutencao String
+  status         String      @default("pendente") // pendente, concluida, cancelada
+  usuarioId      String
+  user           User        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  atividades     Atividades[]
+  createdAt      DateTime    @default(now())
+
+  // Índices para acelerar a renderização do Dashboard e filtros operacionais
+  @@index([usuarioId])
+  @@index([status])
+  @@index([competencia])
+}
+
+model Atividades {
+  id           String   @id @default(uuid())
+  medicaoId    String
+  medicao      Medicao  @relation(fields: [medicaoId], references: [id], onDelete: Cascade)
+  descricao    String
+  responsavel  String?
+  status       String   @default("concluida")
+  motivo       String?
+  fotoAntes    String?  @db.Text // Armazenamento seguro de strings longas Base64
+  fotoDepois   String?  @db.Text
+  dataAntes    DateTime?
+  dataDepois   DateTime?
+}
