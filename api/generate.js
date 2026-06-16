@@ -1,3 +1,11 @@
+// /pages/api/generate.js ou correspondente em App Router
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "50mb", // Aumentado de 4mb para 50mb devido ao peso das fotos em Base64
+    },
+  },
+};
 import { normalizePayload, parseRequestBody } from "./lib/data.js";
 import { emailIsConfigured, sendReportEmail } from "./lib/email.js";
 import { generateReport } from "./lib/reports.js";
