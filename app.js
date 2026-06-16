@@ -134,7 +134,7 @@ function createActivityCards() {
         fields.responsavel.value.trim() ||
         "Novo problema";
       meta.textContent =
-        fields.responsavel.value.trim() || "Sem responsável informado";
+        fields.responsavel.value.trim() || "Sem responsável técnico informado";
       statusBadge.textContent = hasContent ? statusText : "Pendente";
       statusBadge.className = `activity-status ${
         hasContent
@@ -763,7 +763,7 @@ function renderFormWaitingReminders() {
           <div>
             <span>Item ${String(activity.index + 1).padStart(2, "0")} em espera</span>
             <strong>${escapeHtml(activity.atividade || "Problema não descrito")}</strong>
-            <small>${escapeHtml(activity.responsavel || "Sem responsável")} · Entrada ${formatDate(activity.dataAntes || currentDateInputValue())}</small>
+            <small>${escapeHtml(activity.responsavel || "Sem responsável técnico")} · Entrada ${formatDate(activity.dataAntes || currentDateInputValue())}</small>
           </div>
           <p>${escapeHtml(activity.motivo || "Informe o motivo da espera para salvar o registro.")}</p>
           <button type="button" class="secondary-action" data-open-activity="${activity.index}">
@@ -896,7 +896,7 @@ function recordActivity(activity, index) {
         <span>${String(index + 1).padStart(2, "0")}</span>
         <div>
           <strong>${escapeHtml(activity.atividade)}</strong>
-          <small>${escapeHtml(activity.responsavel || "Sem responsável")} · ${formatActivityDates(activity)}</small>
+          <small>${escapeHtml(activity.responsavel || "Sem responsável técnico")} · ${formatActivityDates(activity)}</small>
         </div>
         <span class="activity-status ${waiting ? "is-waiting" : "is-complete"}">${waiting ? "Em espera" : "Concluída"}</span>
       </div>
@@ -1051,7 +1051,7 @@ function renderOperations() {
   operationsContent.innerHTML = `
     <section class="operations-summary">
       ${operationMetric("Pendências abertas", waiting.length, waiting.length ? "requerem acompanhamento" : "operação em dia", waiting.length ? "amber" : "green")}
-      ${operationMetric("Responsáveis ativos", Object.keys(responsibleCounts).length, "nomes identificados", "blue")}
+      ${operationMetric("Responsáveis técnicos ativos", Object.keys(responsibleCounts).length, "nomes identificados", "blue")}
       ${operationMetric("Relatórios exportados", latestExports.length, "entre os registros recentes", "teal")}
     </section>
 
@@ -1069,7 +1069,7 @@ function renderOperations() {
             ? `<div class="operations-table">
                 <div class="operations-table__head">
                   <span>Ordem / atividade</span>
-                  <span>Responsável</span>
+                  <span>Responsável técnico</span>
                   <span>Motivo</span>
                   <span>Atualização</span>
                 </div>
@@ -1101,11 +1101,11 @@ function renderOperations() {
         <article class="panel">
           <div class="panel-title">
             <div>
-              <h2>Distribuição por responsável</h2>
+              <h2>Distribuição por responsável técnico</h2>
               <p>Quantidade de atividades registradas.</p>
             </div>
           </div>
-          ${renderBarChart(sortedEntries(responsibleCounts).slice(0, 6), activities.length, "Nenhum responsável informado.")}
+          ${renderBarChart(sortedEntries(responsibleCounts).slice(0, 6), activities.length, "Nenhum responsável técnico informado.")}
         </article>
         <article class="panel">
           <div class="panel-title">
