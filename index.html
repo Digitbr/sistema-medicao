@@ -8,7 +8,7 @@
       content="Geração e envio de relatórios fotográficos de manutenção."
     />
     <title>Sistema de Medição | Relatório Fotográfico</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=20260616-1" />
   </head>
   <body>
     <div class="app-shell">
@@ -147,7 +147,7 @@
                   name="competencia"
                   required
                   autocomplete="off"
-                  placeholder="Ex.: Junho 2026"
+                  placeholder="Competência atual"
                 />
               </label>
               <label>
@@ -187,7 +187,7 @@
               <span class="step">02</span>
               <div>
                 <h2>Atividades e evidências</h2>
-                <p>Registre até oito atividades com fotos de antes e depois.</p>
+                <p>Registre até oito problemas/atividades com foto de entrada, foto de saída e conclusão.</p>
               </div>
             </div>
             <div id="activities" class="activities"></div>
@@ -322,7 +322,7 @@
         <button type="button" class="activity-card__header">
           <span class="activity-number"></span>
           <span class="activity-title">
-            <strong class="activity-summary">Nova atividade</strong>
+            <strong class="activity-summary">Novo problema</strong>
             <small class="activity-meta">Sem informações</small>
           </span>
           <span class="activity-status is-empty">Pendente</span>
@@ -332,11 +332,11 @@
         <div class="activity-card__body">
           <div class="form-grid activity-fields">
             <label>
-              <span>Data da foto antes</span>
+              <span>Data de entrada</span>
               <input type="date" data-field="dataAntes" />
             </label>
             <label>
-              <span>Data da foto depois</span>
+              <span>Data de saída</span>
               <input type="date" data-field="dataDepois" />
             </label>
             <label class="form-grid__wide">
@@ -344,35 +344,35 @@
               <input data-field="responsavel" placeholder="Nome do responsável" />
             </label>
             <label class="form-grid__wide">
-              <span>Atividade executada</span>
+              <span>Problema / descrição do serviço</span>
               <textarea
                 data-field="atividade"
                 rows="3"
-                placeholder="Descreva o serviço realizado"
+                placeholder="Ex.: Consertar caixa d'água com vazamento"
               ></textarea>
             </label>
           </div>
 
           <div class="photo-grid">
-            <label class="photo-input">
-              <span class="photo-input__label">Foto antes</span>
+            <label class="photo-input is-entry">
+              <span class="photo-input__label">Foto de entrada</span>
               <input
                 type="file"
                 accept="image/jpeg,image/png"
                 data-field="fotoAntes"
               />
               <span class="photo-input__action">Selecionar imagem</span>
-              <img alt="Prévia da foto antes" />
+              <img alt="Prévia da foto de entrada" />
             </label>
-            <label class="photo-input">
-              <span class="photo-input__label">Foto depois</span>
+            <label class="photo-input is-exit">
+              <span class="photo-input__label">Foto de saída</span>
               <input
                 type="file"
                 accept="image/jpeg,image/png"
                 data-field="fotoDepois"
               />
               <span class="photo-input__action">Selecionar imagem</span>
-              <img alt="Prévia da foto depois" />
+              <img alt="Prévia da foto de saída" />
             </label>
           </div>
 
@@ -391,11 +391,11 @@
             </div>
 
             <label>
-              <span>Motivo</span>
+              <span>Conclusão / motivo</span>
               <textarea
                 data-field="motivo"
                 rows="2"
-                placeholder="Informe o motivo, impedimento ou observação"
+                placeholder="Ex.: Vazamento sanado com troca de vedação"
               ></textarea>
             </label>
 
@@ -406,6 +406,6 @@
     </template>
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-    <script src="/app.js"></script>
+    <script src="/app.js?v=20260616-1"></script>
   </body>
 </html>

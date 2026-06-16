@@ -53,7 +53,24 @@ bindDashboardFilters();
 bindRecordFilters();
 bindRecordActions();
 bindBackupActions();
+bindReportForm();
 initialize();
+
+function currentDateInputValue(date = new Date()) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0")
+  ].join("-");
+}
+
+function currentCompetenceLabel(date = new Date()) {
+  const label = new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+    year: "numeric"
+  }).format(date);
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
 
 async function initialize() {
   currentDate.textContent = new Intl.DateTimeFormat("pt-BR", {
@@ -66,6 +83,7 @@ async function initialize() {
     getServiceConfig()
   ]);
   reportRecipient.textContent = state.config.recipient;
+  resetForm();
   updateGenerateButton();
   renderDashboard();
   renderRecords();
@@ -101,8 +119,9 @@ function createActivityCards() {
       const hasContent = Boolean(
         fields.atividade.value.trim() ||
         fields.responsavel.value.trim() ||
-        fields.dataAntes.value ||
-        fields.dataDepois.value
+        fields.motivo.value.trim() ||
+        photos.fotoAntes ||
+        photos.fotoDepois
       );
       const statusText =
         fields.status.value === "em-espera" ? "Em espera" : "Concluída";
@@ -110,7 +129,7 @@ function createActivityCards() {
       summary.textContent =
         fields.atividade.value.trim() ||
         fields.responsavel.value.trim() ||
-        "Nova atividade";
+        "Novo problema";
       meta.textContent =
         fields.responsavel.value.trim() || "Sem responsável informado";
       statusBadge.textContent = hasContent ? statusText : "Pendente";
@@ -133,9 +152,32 @@ function createActivityCards() {
       });
       fields.motivo.placeholder =
         status === "em-espera"
-          ? "Descreva o motivo da atividade estar em espera"
-          : "Informe uma observação, se necessário";
+          ? "Explique por que o problema ficou em espera"
+          : "Descreva a conclusão do serviço realizado";
       updateSummary();
+    };
+
+    const applyDefaultDates = () => {
+      const today = currentDateInputValue();
+      if (!fields.dataAntes.value) fields.dataAntes.value = today;
+      if (!fields.dataDepois.value) fields.dataDepois.value = today;
+    };
+
+    const syncMaintenanceType = (type = currentMaintenanceType()) => {
+      const normalizedType = normalizeText(type);
+      if (normalizedType.includes("corretiva")) {
+        fields.atividade.placeholder =
+          "Ex.: Consertar caixa d'água, corrigir vazamento ou substituir componente danificado";
+      } else if (normalizedType.includes("preventiva")) {
+        fields.atividade.placeholder =
+          "Ex.: Inspecionar, limpar, ajustar ou prevenir falha no equipamento";
+      } else if (normalizedType.includes("emergencial")) {
+        fields.atividade.placeholder =
+          "Ex.: Atender ocorrência emergencial e registrar a solução aplicada";
+      } else {
+        fields.atividade.placeholder =
+          "Descreva o problema, serviço realizado ou ponto inspecionado";
+      }
     };
 
     const setPhoto = (fieldName, dataUrl) => {
@@ -157,6 +199,8 @@ function createActivityCards() {
       for (const field of Object.values(fields)) {
         field.value = field.dataset.field === "status" ? "concluida" : "";
       }
+      applyDefaultDates();
+      syncMaintenanceType();
       setPhoto("fotoAntes", "");
       setPhoto("fotoDepois", "");
       setStatus("concluida");
@@ -171,14 +215,22 @@ function createActivityCards() {
       fields.motivo.value = activity.motivo || "";
       setPhoto("fotoAntes", activity.fotoAntes || "");
       setPhoto("fotoDepois", activity.fotoDepois || "");
+      syncMaintenanceType();
       setStatus(activity.status === "em-espera" ? "em-espera" : "concluida");
     };
 
     const getData = async () => {
       await Promise.all(Object.values(photoPromises));
+      const hasMeaningfulData = Boolean(
+        fields.atividade.value.trim() ||
+        fields.responsavel.value.trim() ||
+        fields.motivo.value.trim() ||
+        photos.fotoAntes ||
+        photos.fotoDepois
+      );
       return {
-        dataAntes: fields.dataAntes.value,
-        dataDepois: fields.dataDepois.value,
+        dataAntes: hasMeaningfulData ? fields.dataAntes.value : "",
+        dataDepois: hasMeaningfulData ? fields.dataDepois.value : "",
         responsavel: fields.responsavel.value.trim(),
         atividade: fields.atividade.value.trim(),
         status: fields.status.value,
@@ -203,6 +255,9 @@ function createActivityCards() {
       field.addEventListener("change", updateSummary);
     }
 
+    fields.atividade.addEventListener("input", applyDefaultDates);
+    fields.responsavel.addEventListener("input", applyDefaultDates);
+
     statusButtons.forEach((button) => {
       button.addEventListener("click", () => setStatus(button.dataset.status));
     });
@@ -215,6 +270,7 @@ function createActivityCards() {
           setPhoto(fieldName, "");
           return;
         }
+        applyDefaultDates();
         photoPromises[fieldName] = fileToDataUrl(file)
           .then((dataUrl) => setPhoto(fieldName, dataUrl))
           .catch((error) => {
@@ -233,6 +289,7 @@ function createActivityCards() {
       getData,
       reset,
       setData,
+      syncMaintenanceType,
       updateSummary
     });
   }
@@ -351,6 +408,13 @@ function bindBackupActions() {
   recordsImportInput.addEventListener("change", importRecordsBackup);
 }
 
+function bindReportForm() {
+  reportForm.elements.tipoManutencao.addEventListener("change", () => {
+    syncMaintenanceCards();
+    activityCards[0]?.card.classList.add("is-open");
+  });
+}
+
 function exportRecordsBackup() {
   const payload = JSON.stringify(
     {
@@ -447,12 +511,15 @@ function setSidebarOpen(open) {
 
 function resetForm() {
   reportForm.reset();
+  reportForm.elements.competencia.value = currentCompetenceLabel();
   reportForm.elements.contratada.value = DEFAULT_CONTRACTOR;
+  reportForm.elements.tipoManutencao.value = "Preventiva";
   state.editingRecordId = null;
   activityCards.forEach((activity) => activity.reset());
+  syncMaintenanceCards();
   reportPageTitle.textContent = "Nova medição de serviço";
   reportPageDescription.textContent =
-    "Preencha os dados, registre as atividades e gere o relatório.";
+    "Preencha os dados, registre o problema, adicione as fotos de entrada e saída e gere o relatório.";
   saveRecordButton.textContent = "Salvar medição";
   setFormMessage("Salve a medição ou escolha um formato para gerar o relatório.");
 }
@@ -466,6 +533,7 @@ function loadRecordIntoForm(record) {
     record.metadata.contratada || DEFAULT_CONTRACTOR;
   reportForm.elements.tipoManutencao.value =
     record.metadata.tipoManutencao || "";
+  syncMaintenanceCards();
   activityCards.forEach((activity, index) => {
     activity.setData(record.activities[index]);
   });
@@ -553,7 +621,7 @@ async function exportSavedRecord(record, button, format = "excel") {
       activities: record.activities,
       format
     });
-    if (new Blob([payload]).size > 3.8 * 1024 * 1024) {
+    if (new Blob([payload]).size > 45 * 1024 * 1024) {
       throw new Error(
         "As fotos ultrapassaram o limite do envio. Remova algumas imagens e tente novamente."
       );
@@ -617,6 +685,14 @@ function renderAllDataViews() {
   renderDashboard();
   renderRecords();
   renderOperations();
+}
+
+function currentMaintenanceType() {
+  return reportForm.elements.tipoManutencao.value;
+}
+
+function syncMaintenanceCards() {
+  activityCards.forEach((activity) => activity.syncMaintenanceType(currentMaintenanceType()));
 }
 
 function renderRecords() {
@@ -744,11 +820,11 @@ function recordActivity(activity, index) {
         </div>
         <span class="activity-status ${waiting ? "is-waiting" : "is-complete"}">${waiting ? "Em espera" : "Concluída"}</span>
       </div>
-      ${activity.motivo ? `<p><strong>Motivo/observação:</strong> ${escapeHtml(activity.motivo)}</p>` : ""}
+      ${activity.motivo ? `<p><strong>Conclusão/motivo:</strong> ${escapeHtml(activity.motivo)}</p>` : ""}
       ${activity.fotoAntes || activity.fotoDepois ? `
         <div class="saved-photos">
-          ${activity.fotoAntes ? `<figure><img src="${escapeAttr(activity.fotoAntes)}" alt="Foto antes"><figcaption>Antes</figcaption></figure>` : ""}
-          ${activity.fotoDepois ? `<figure><img src="${escapeAttr(activity.fotoDepois)}" alt="Foto depois"><figcaption>Depois</figcaption></figure>` : ""}
+          ${activity.fotoAntes ? `<figure><img src="${escapeAttr(activity.fotoAntes)}" alt="Foto de entrada"><figcaption>Entrada</figcaption></figure>` : ""}
+          ${activity.fotoDepois ? `<figure><img src="${escapeAttr(activity.fotoDepois)}" alt="Foto de saída"><figcaption>Saída</figcaption></figure>` : ""}
         </div>
       ` : ""}
     </article>
@@ -1055,7 +1131,7 @@ function validateActivities() {
   const filled = activityCards.filter(({ fields }) =>
     fields.atividade.value.trim()
   );
-  if (!filled.length) throw new Error("Cadastre ao menos uma atividade executada.");
+  if (!filled.length) throw new Error("Cadastre ao menos um problema ou serviço executado.");
 
   const waitingWithoutReason = filled.find(
     ({ fields }) =>
@@ -1064,7 +1140,7 @@ function validateActivities() {
   if (waitingWithoutReason) {
     waitingWithoutReason.card.classList.add("is-open");
     waitingWithoutReason.fields.motivo.focus();
-    throw new Error("Informe o motivo da atividade que está em espera.");
+    throw new Error("Informe o motivo do problema que está em espera.");
   }
 }
 

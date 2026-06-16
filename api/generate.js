@@ -5,7 +5,7 @@ const DEFAULT_RECIPIENT = "comercial1@primecsg.com.br";
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: "4mb"
+      sizeLimit: "50mb"
     }
   }
 };
