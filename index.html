@@ -8,7 +8,7 @@
       content="Geração e envio de relatórios fotográficos de manutenção."
     />
     <title>Sistema de Medição | Relatório Fotográfico</title>
-    <link rel="stylesheet" href="/styles.css?v=20260616-2" />
+    <link rel="stylesheet" href="/styles.css?v=20260702-1" />
   </head>
   <body>
     <div class="app-shell">
@@ -186,9 +186,17 @@
             <div class="section-heading">
               <span class="step">02</span>
               <div>
-                <h2>Atividades e evidências</h2>
-                <p>Registre até oito problemas/atividades com foto de entrada, foto de saída e conclusão.</p>
+                <h2>Ocorrências, OS e evidências</h2>
+                <p>Registre até oito ocorrências. Cada ocorrência pode ter uma OS própria, ser salva e atualizada individualmente.</p>
               </div>
+            </div>
+            <div class="occurrence-area-header">
+              <div>
+                <span class="email-label">Cabeçalho da área de ocorrências</span>
+                <strong>Controle individual por ocorrência</strong>
+                <p>Quando a imagem definitiva do cabeçalho for adicionada ao projeto, ela poderá ficar fixa nesta área.</p>
+              </div>
+              <span class="activity-status is-complete">OS individual</span>
             </div>
             <div id="activities" class="activities"></div>
           </section>
@@ -350,7 +358,11 @@
               <span>Data de saída</span>
               <input type="date" data-field="dataDepois" />
             </label>
-            <label class="form-grid__wide">
+            <label>
+              <span>Nº da OS da ocorrência</span>
+              <input data-field="ordemServico" placeholder="Ex.: OS-001234" />
+            </label>
+            <label>
               <span>Responsável técnico</span>
               <input data-field="responsavel" placeholder="Nome do responsável técnico" />
             </label>
@@ -410,13 +422,21 @@
               ></textarea>
             </label>
 
-            <button type="button" class="clear-activity">Limpar atividade</button>
+            <div class="occurrence-save-panel">
+              <span data-occurrence-save-status>Ocorrência ainda não salva individualmente.</span>
+              <div>
+                <button type="button" class="secondary-action" data-save-occurrence>
+                  Salvar ocorrência
+                </button>
+                <button type="button" class="clear-activity">Limpar atividade</button>
+              </div>
+            </div>
           </div>
         </div>
       </article>
     </template>
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-    <script src="/app.js?v=20260616-3"></script>
+    <script src="/app.js?v=20260702-1"></script>
   </body>
 </html>
