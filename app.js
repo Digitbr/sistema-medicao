@@ -212,20 +212,13 @@ function createActivityCards() {
       renderFormWaitingReminders();
     };
 
-    const lockEntryDate = (value = currentDateInputValue()) => {
-      const lockedDate = value || currentDateInputValue();
-      fields.dataAntes.value = lockedDate;
-      fields.dataAntes.dataset.lockedDate = lockedDate;
-    };
-
-    const restoreEntryDate = () => {
-      fields.dataAntes.value =
-        fields.dataAntes.dataset.lockedDate || currentDateInputValue();
+    const setDefaultEntryDate = (value = currentDateInputValue()) => {
+      fields.dataAntes.value = value || currentDateInputValue();
     };
 
     const applyDefaultDates = () => {
       const today = currentDateInputValue();
-      if (!fields.dataAntes.dataset.lockedDate) lockEntryDate();
+      if (!fields.dataAntes.value) setDefaultEntryDate(today);
       if (!fields.dataDepois.value) fields.dataDepois.value = today;
     };
 
@@ -271,7 +264,6 @@ function createActivityCards() {
       }
       if (saveOccurrenceButton) saveOccurrenceButton.textContent = "Salvar ocorrência";
       if (exportOccurrenceButton) exportOccurrenceButton.textContent = "Exportar ocorrência";
-      delete fields.dataAntes.dataset.lockedDate;
       applyDefaultDates();
       syncMaintenanceType();
       setPhoto("fotoAntes", "");
@@ -281,7 +273,7 @@ function createActivityCards() {
     };
 
     const setData = (activity = {}) => {
-      lockEntryDate(activity.dataAntes || currentDateInputValue());
+      setDefaultEntryDate(activity.dataAntes || currentDateInputValue());
       fields.dataDepois.value = activity.dataDepois || "";
       fields.ordemServico.value = activity.ordemServico || activity.os || "";
       savedRecordId = activity.recordId || "";
@@ -320,9 +312,7 @@ function createActivityCards() {
         photos.fotoDepois
       );
       return {
-        dataAntes: hasMeaningfulData
-          ? fields.dataAntes.dataset.lockedDate || fields.dataAntes.value
-          : "",
+        dataAntes: hasMeaningfulData ? fields.dataAntes.value : "",
         dataDepois: hasMeaningfulData ? fields.dataDepois.value : "",
         ordemServico: hasMeaningfulData ? fields.ordemServico.value.trim() : "",
         responsavel: fields.responsavel.value.trim(),
@@ -351,8 +341,7 @@ function createActivityCards() {
       field.addEventListener("change", updateSummary);
     }
 
-    fields.dataAntes.addEventListener("input", restoreEntryDate);
-    fields.dataAntes.addEventListener("change", restoreEntryDate);
+    fields.dataAntes.addEventListener("change", renderFormWaitingReminders);
 
     fields.atividade.addEventListener("input", applyDefaultDates);
     fields.responsavel.addEventListener("input", applyDefaultDates);
