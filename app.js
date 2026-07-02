@@ -84,7 +84,10 @@ async function initialize() {
     getAllRecords(),
     getServiceConfig()
   ]);
-  reportRecipient.textContent = state.config.recipient;
+
+  // Make recipient editable by creating an input field next to #report-recipient
+  ensureRecipientInput();
+
   resetForm();
   updateGenerateButton();
   renderDashboard();
@@ -92,6 +95,39 @@ async function initialize() {
   renderOperations();
   setView("report");
   refreshIcons();
+}
+
+function ensureRecipientInput() {
+  // Update displayed recipient from loaded config
+  if (reportRecipient) reportRecipient.textContent = state.config.recipient || "";
+
+  const existingInput = document.querySelector("#report-recipient-input");
+  if (existingInput) {
+    existingInput.value = state.config.recipient || "";
+    existingInput.addEventListener("input", () => {
+      state.config.recipient = existingInput.value.trim();
+      if (reportRecipient) reportRecipient.textContent = state.config.recipient;
+    });
+    return existingInput;
+  }
+
+  if (!reportRecipient || !reportRecipient.parentNode) return null;
+
+  const input = document.createElement("input");
+  input.type = "email";
+  input.id = "report-recipient-input";
+  input.placeholder = "E-mail do destinatário (opcional)";
+  input.value = state.config.recipient || "";
+  input.className = "recipient-input";
+  input.addEventListener("input", () => {
+    state.config.recipient = input.value.trim();
+    if (reportRecipient) reportRecipient.textContent = state.config.recipient;
+  });
+
+  // Insert the input after the existing element and hide the original label/span
+  reportRecipient.parentNode.insertBefore(input, reportRecipient.nextSibling);
+  reportRecipient.hidden = true;
+  return input;
 }
 
 function createActivityCards() {
@@ -979,7 +1015,7 @@ function renderDashboard() {
         </div>
         <div class="insight-list">
           ${insightItem("Maior demanda", topType ? `${topType[0]} representa ${percentage(topType[1], records.length)}% das medições.` : "Aguardando registros para identificar a maior demanda.")}
-          ${insightItem("Acompanhamento", waiting.length ? `${waiting.length} atividade(s) estão em espera em ${records.filter((record) => filledActivities(record).some(isWaiting)).length} medição(ões).` : "Não há atividades em espera no histórico.")}
+          ${insightItem("Acompanhamento", waiting.length ? `${waiting.length} atividade(s) estão em espera em ${records.filter((record) => filledActivities(record).some(isWaiting)).length} medições.` : "Sem atividades em espera atualmente.")}
           ${insightItem("Produtividade", records.length ? `A média atual é de ${average} atividade(s) por medição.` : "A média será calculada após o primeiro registro.")}
         </div>
         ${waiting.length ? `
