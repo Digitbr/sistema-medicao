@@ -141,6 +141,8 @@ function createActivityCards() {
     const statusBadge = fragment.querySelector(".activity-status");
     const clearButton = fragment.querySelector(".clear-activity");
     const saveOccurrenceButton = fragment.querySelector("[data-save-occurrence]");
+    const exportOccurrenceButton = fragment.querySelector("[data-export-occurrence]");
+    const occurrenceExportFormat = fragment.querySelector("[data-occurrence-export-format]");
     const occurrenceSaveStatus = fragment.querySelector("[data-occurrence-save-status]");
     const waitingReasonField = fragment.querySelector(".waiting-reason-field");
     const statusButtons = [...fragment.querySelectorAll("[data-status]")];
@@ -268,6 +270,7 @@ function createActivityCards() {
         occurrenceSaveStatus.textContent = "Ocorrência ainda não salva individualmente.";
       }
       if (saveOccurrenceButton) saveOccurrenceButton.textContent = "Salvar ocorrência";
+      if (exportOccurrenceButton) exportOccurrenceButton.textContent = "Exportar ocorrência";
       delete fields.dataAntes.dataset.lockedDate;
       applyDefaultDates();
       syncMaintenanceType();
@@ -291,6 +294,11 @@ function createActivityCards() {
         saveOccurrenceButton.textContent = savedRecordId
           ? "Atualizar ocorrência"
           : "Salvar ocorrência";
+      }
+      if (exportOccurrenceButton) {
+        exportOccurrenceButton.textContent = savedRecordId
+          ? "Exportar ocorrência"
+          : "Salvar e exportar";
       }
       fields.responsavel.value = activity.responsavel || "";
       fields.atividade.value = activity.atividade || "";
@@ -373,6 +381,13 @@ function createActivityCards() {
 
     clearButton.addEventListener("click", reset);
     saveOccurrenceButton?.addEventListener("click", () => saveOccurrenceFromCard(index));
+    exportOccurrenceButton?.addEventListener("click", () =>
+      exportOccurrenceFromCard(
+        index,
+        exportOccurrenceButton,
+        occurrenceExportFormat?.value || reportFormat.value
+      )
+    );
 
     activityContainer.append(fragment);
     activityCards.push({
@@ -395,6 +410,11 @@ function createActivityCards() {
           saveOccurrenceButton.textContent = savedRecordId
             ? "Atualizar ocorrência"
             : "Salvar ocorrência";
+        }
+        if (exportOccurrenceButton) {
+          exportOccurrenceButton.textContent = savedRecordId
+            ? "Exportar ocorrência"
+            : "Salvar e exportar";
         }
       }
     });
@@ -479,6 +499,14 @@ function bindRecordActions() {
       state.records = state.records.filter((item) => item.id !== record.id);
       if (state.editingRecordId === record.id) resetForm();
       renderAllDataViews();
+      return;
+    }
+
+    if (action === "export-activity") {
+      const activityIndex = Number(button.dataset.activityIndex);
+      const activity = filledActivities(record)[activityIndex];
+      if (!activity) return;
+      await exportSavedActivity(record, activity, button, button.dataset.recordFormat || "excel");
       return;
     }
 
@@ -750,6 +778,27 @@ async function saveOccurrenceFromCard(index) {
   return record;
 }
 
+async function exportOccurrenceFromCard(index, button, format = "excel") {
+  if (!button) return;
+  button.disabled = true;
+  const originalText = button.textContent;
+  button.textContent = "Preparando...";
+
+  try {
+    const record = await saveOccurrenceFromCard(index);
+    if (!record) return;
+    button.textContent = "Exportando...";
+    await exportSavedRecord(record, button, format, {
+      successMessage: `${reportFormatLabel(format)} individual da ocorrência baixado com sucesso.`
+    });
+  } finally {
+    button.disabled = false;
+    button.textContent = activityCards[index]?.getSavedRecordId()
+      ? "Exportar ocorrência"
+      : originalText || "Exportar ocorrência";
+  }
+}
+
 async function saveCurrentRecord(options = {}) {
   const record = await collectCurrentRecord();
   if (!record) return null;
@@ -817,7 +866,40 @@ reportForm.addEventListener("submit", async (event) => {
   await exportSavedRecord(record, generateButton, reportFormat.value);
 });
 
-async function exportSavedRecord(record, button, format = "excel") {
+async function exportSavedActivity(parentRecord, activity, button, format = "excel") {
+  const order = String(activity.ordemServico || parentRecord.metadata?.ordemServico || "").trim();
+  const now = new Date().toISOString();
+  const existing = state.records.find(
+    (record) =>
+      normalizeText(record.metadata?.ordemServico) === normalizeText(order) &&
+      filledActivities(record).length === 1
+  );
+  const individualRecord = {
+    id: existing?.id || crypto.randomUUID(),
+    metadata: {
+      ...parentRecord.metadata,
+      ordemServico: order || parentRecord.metadata?.ordemServico || ""
+    },
+    activities: [
+      {
+        ...activity,
+        ordemServico: order || activity.ordemServico || parentRecord.metadata?.ordemServico || ""
+      }
+    ],
+    createdAt: existing?.createdAt || now,
+    updatedAt: now,
+    lastExportedAt: existing?.lastExportedAt || "",
+    lastExportFormat: existing?.lastExportFormat || ""
+  };
+
+  await putRecord(individualRecord);
+  upsertStateRecord(individualRecord);
+  await exportSavedRecord(individualRecord, button, format, {
+    successMessage: `${reportFormatLabel(format)} individual da ocorrência baixado com sucesso.`
+  });
+}
+
+async function exportSavedRecord(record, button, format = "excel", options = {}) {
   const formatLabel = reportFormatLabel(format);
   button.disabled = true;
   setFormMessage(`Gerando ${formatLabel} e preparando a exportação...`);
@@ -877,8 +959,8 @@ async function exportSavedRecord(record, button, format = "excel") {
       );
     } else {
       setFormMessage(
-        `${formatLabel} baixado. O envio por e-mail aguarda a configuração do serviço.`,
-        "warning"
+        options.successMessage || `${formatLabel} baixado. O envio por e-mail aguarda a configuração do serviço.`,
+        options.successMessage ? "success" : "warning"
       );
     }
   } catch (error) {
@@ -1035,7 +1117,7 @@ function recordBox(record) {
         </div>
 
         <div class="record-activity-list">
-          ${activities.map((activity, index) => recordActivity(activity, index)).join("")}
+          ${activities.map((activity, index) => recordActivity(activity, index, record)).join("")}
         </div>
 
         <div class="record-actions">
@@ -1053,7 +1135,7 @@ function recordBox(record) {
   `;
 }
 
-function recordActivity(activity, index) {
+function recordActivity(activity, index, record = null) {
   const waiting = isWaiting(activity);
   return `
     <article class="saved-activity">
@@ -1070,6 +1152,14 @@ function recordActivity(activity, index) {
         <div class="saved-photos">
           ${activity.fotoAntes ? `<figure><img src="${escapeAttr(activity.fotoAntes)}" alt="Foto de entrada"><figcaption>Entrada</figcaption></figure>` : ""}
           ${activity.fotoDepois ? `<figure><img src="${escapeAttr(activity.fotoDepois)}" alt="Foto de saída"><figcaption>Saída</figcaption></figure>` : ""}
+        </div>
+      ` : ""}
+      ${record ? `
+        <div class="saved-activity__actions">
+          <span>Exportação individual:</span>
+          <button type="button" class="secondary-action" data-record-action="export-activity" data-record-format="excel" data-record-id="${escapeAttr(record.id)}" data-activity-index="${index}">Excel</button>
+          <button type="button" class="secondary-action" data-record-action="export-activity" data-record-format="word" data-record-id="${escapeAttr(record.id)}" data-activity-index="${index}">Word</button>
+          <button type="button" class="secondary-action" data-record-action="export-activity" data-record-format="presentation" data-record-id="${escapeAttr(record.id)}" data-activity-index="${index}">PowerPoint</button>
         </div>
       ` : ""}
     </article>
