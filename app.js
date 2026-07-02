@@ -140,6 +140,8 @@ function createActivityCards() {
     const meta = fragment.querySelector(".activity-meta");
     const statusBadge = fragment.querySelector(".activity-status");
     const clearButton = fragment.querySelector(".clear-activity");
+    const saveOccurrenceButton = fragment.querySelector("[data-save-occurrence]");
+    const occurrenceSaveStatus = fragment.querySelector("[data-occurrence-save-status]");
     const waitingReasonField = fragment.querySelector(".waiting-reason-field");
     const statusButtons = [...fragment.querySelectorAll("[data-status]")];
     const fields = Object.fromEntries(
@@ -150,6 +152,7 @@ function createActivityCards() {
     );
     const photos = { fotoAntes: "", fotoDepois: "" };
     const photoPromises = { fotoAntes: Promise.resolve(), fotoDepois: Promise.resolve() };
+    let savedRecordId = "";
 
     number.textContent = String(index + 1).padStart(2, "0");
     if (index === 0) card.classList.add("is-open");
@@ -157,6 +160,7 @@ function createActivityCards() {
     const updateSummary = () => {
       const hasContent = Boolean(
         fields.atividade.value.trim() ||
+        fields.ordemServico.value.trim() ||
         fields.responsavel.value.trim() ||
         fields.motivo.value.trim() ||
         photos.fotoAntes ||
@@ -165,12 +169,15 @@ function createActivityCards() {
       const statusText =
         fields.status.value === "em-espera" ? "Em espera" : "Concluída";
 
+      const occurrenceOrder = fields.ordemServico.value.trim();
       summary.textContent =
-        fields.atividade.value.trim() ||
-        fields.responsavel.value.trim() ||
-        "Novo problema";
-      meta.textContent =
-        fields.responsavel.value.trim() || "Sem responsável técnico informado";
+        occurrenceOrder || fields.atividade.value.trim() || "Nova ocorrência";
+      meta.textContent = [
+        fields.responsavel.value.trim() || "Sem responsável técnico informado",
+        fields.atividade.value.trim()
+      ]
+        .filter(Boolean)
+        .join(" · ");
       statusBadge.textContent = hasContent ? statusText : "Pendente";
       statusBadge.className = `activity-status ${
         hasContent
@@ -256,6 +263,11 @@ function createActivityCards() {
       for (const field of Object.values(fields)) {
         field.value = field.dataset.field === "status" ? "concluida" : "";
       }
+      savedRecordId = "";
+      if (occurrenceSaveStatus) {
+        occurrenceSaveStatus.textContent = "Ocorrência ainda não salva individualmente.";
+      }
+      if (saveOccurrenceButton) saveOccurrenceButton.textContent = "Salvar ocorrência";
       delete fields.dataAntes.dataset.lockedDate;
       applyDefaultDates();
       syncMaintenanceType();
@@ -268,6 +280,18 @@ function createActivityCards() {
     const setData = (activity = {}) => {
       lockEntryDate(activity.dataAntes || currentDateInputValue());
       fields.dataDepois.value = activity.dataDepois || "";
+      fields.ordemServico.value = activity.ordemServico || activity.os || "";
+      savedRecordId = activity.recordId || "";
+      if (occurrenceSaveStatus) {
+        occurrenceSaveStatus.textContent = savedRecordId
+          ? "Ocorrência carregada para atualização individual."
+          : "Ocorrência ainda não salva individualmente.";
+      }
+      if (saveOccurrenceButton) {
+        saveOccurrenceButton.textContent = savedRecordId
+          ? "Atualizar ocorrência"
+          : "Salvar ocorrência";
+      }
       fields.responsavel.value = activity.responsavel || "";
       fields.atividade.value = activity.atividade || "";
       fields.motivo.value = activity.motivo || "";
@@ -281,6 +305,7 @@ function createActivityCards() {
       await Promise.all(Object.values(photoPromises));
       const hasMeaningfulData = Boolean(
         fields.atividade.value.trim() ||
+        fields.ordemServico.value.trim() ||
         fields.responsavel.value.trim() ||
         fields.motivo.value.trim() ||
         photos.fotoAntes ||
@@ -291,6 +316,7 @@ function createActivityCards() {
           ? fields.dataAntes.dataset.lockedDate || fields.dataAntes.value
           : "",
         dataDepois: hasMeaningfulData ? fields.dataDepois.value : "",
+        ordemServico: hasMeaningfulData ? fields.ordemServico.value.trim() : "",
         responsavel: fields.responsavel.value.trim(),
         atividade: fields.atividade.value.trim(),
         status: fields.status.value,
@@ -308,6 +334,7 @@ function createActivityCards() {
     for (const field of [
       fields.dataAntes,
       fields.dataDepois,
+      fields.ordemServico,
       fields.responsavel,
       fields.atividade,
       fields.motivo
@@ -345,6 +372,7 @@ function createActivityCards() {
     }
 
     clearButton.addEventListener("click", reset);
+    saveOccurrenceButton?.addEventListener("click", () => saveOccurrenceFromCard(index));
 
     activityContainer.append(fragment);
     activityCards.push({
@@ -354,7 +382,21 @@ function createActivityCards() {
       reset,
       setData,
       syncMaintenanceType,
-      updateSummary
+      updateSummary,
+      getSavedRecordId: () => savedRecordId,
+      setSavedRecordId: (id) => {
+        savedRecordId = id || "";
+        if (occurrenceSaveStatus) {
+          occurrenceSaveStatus.textContent = savedRecordId
+            ? "Ocorrência salva individualmente. Alterações futuras poderão atualizar este registro."
+            : "Ocorrência ainda não salva individualmente.";
+        }
+        if (saveOccurrenceButton) {
+          saveOccurrenceButton.textContent = savedRecordId
+            ? "Atualizar ocorrência"
+            : "Salvar ocorrência";
+        }
+      }
     });
   }
 
@@ -614,13 +656,98 @@ function loadRecordIntoForm(record) {
     record.metadata.tipoManutencao || "";
   syncMaintenanceCards();
   activityCards.forEach((activity, index) => {
-    activity.setData(record.activities[index]);
+    const activityData = record.activities[index];
+    activity.setData(
+      activityData
+        ? {
+            ...activityData,
+            ordemServico: activityData.ordemServico || record.metadata.ordemServico || "",
+            recordId: index === 0 ? record.id : ""
+          }
+        : undefined
+    );
   });
   reportPageTitle.textContent = `Editar ${recordLabel(record)}`;
   reportPageDescription.textContent =
     "Atualize os dados e salve para manter o histórico sincronizado.";
   saveRecordButton.textContent = "Atualizar medição";
   setFormMessage(`Editando registro salvo em ${formatDateTime(record.updatedAt)}.`);
+}
+
+
+async function saveOccurrenceFromCard(index) {
+  const activityCard = activityCards[index];
+  if (!activityCard) return null;
+
+  const requiredFields = [
+    reportForm.elements.competencia,
+    reportForm.elements.contratada,
+    reportForm.elements.tipoManutencao
+  ];
+  const invalidField = requiredFields.find((field) => !field.checkValidity());
+  if (invalidField) {
+    invalidField.reportValidity();
+    return null;
+  }
+
+  const activity = await activityCard.getData();
+  if (!String(activity.atividade || "").trim()) {
+    activityCard.card.classList.add("is-open");
+    activityCard.fields.atividade.focus();
+    setFormMessage("Descreva a ocorrência antes de salvar individualmente.", "error");
+    return null;
+  }
+
+  if (activity.status === "em-espera" && !String(activity.motivo || "").trim()) {
+    activityCard.card.classList.add("is-open");
+    activityCard.fields.motivo.focus();
+    setFormMessage("Informe o motivo da espera antes de salvar a ocorrência.", "error");
+    return null;
+  }
+
+  const formData = new FormData(reportForm);
+  const order =
+    String(activity.ordemServico || "").trim() ||
+    String(formData.get("ordemServico") || "").trim();
+
+  if (!order) {
+    activityCard.card.classList.add("is-open");
+    activityCard.fields.ordemServico.focus();
+    setFormMessage("Informe o número da OS desta ocorrência.", "error");
+    return null;
+  }
+
+  activity.ordemServico = order;
+
+  const existing =
+    state.records.find((record) => record.id === activityCard.getSavedRecordId()) ||
+    state.records.find(
+      (record) =>
+        normalizeText(record.metadata?.ordemServico) === normalizeText(order) &&
+        filledActivities(record).length === 1
+    );
+  const now = new Date().toISOString();
+  const record = {
+    id: existing?.id || crypto.randomUUID(),
+    metadata: {
+      competencia: String(formData.get("competencia") || "").trim(),
+      ordemServico: order,
+      contratada: String(formData.get("contratada") || "").trim(),
+      tipoManutencao: String(formData.get("tipoManutencao") || "").trim()
+    },
+    activities: [activity],
+    createdAt: existing?.createdAt || now,
+    updatedAt: now,
+    lastExportedAt: existing?.lastExportedAt || "",
+    lastExportFormat: existing?.lastExportFormat || ""
+  };
+
+  await putRecord(record);
+  upsertStateRecord(record);
+  activityCard.setSavedRecordId(record.id);
+  renderAllDataViews();
+  setFormMessage(`Ocorrência ${recordLabel(record)} salva individualmente.`, "success");
+  return record;
 }
 
 async function saveCurrentRecord(options = {}) {
@@ -659,6 +786,7 @@ async function collectCurrentRecord() {
     const activities = await Promise.all(
       activityCards.map((activity) => activity.getData())
     );
+    const firstActivityOrder = activities.find((activity) => activity.ordemServico)?.ordemServico || "";
     const existing = state.records.find(
       (record) => record.id === state.editingRecordId
     );
@@ -667,7 +795,7 @@ async function collectCurrentRecord() {
       id: existing?.id || crypto.randomUUID(),
       metadata: {
         competencia: String(formData.get("competencia") || "").trim(),
-        ordemServico: String(formData.get("ordemServico") || "").trim(),
+        ordemServico: String(formData.get("ordemServico") || firstActivityOrder || "").trim(),
         contratada: String(formData.get("contratada") || "").trim(),
         tipoManutencao: String(formData.get("tipoManutencao") || "").trim()
       },
@@ -826,6 +954,7 @@ function renderRecords() {
           record.metadata.contratada,
           record.metadata.tipoManutencao,
           ...activities.flatMap((activity) => [
+            activity.ordemServico,
             activity.responsavel,
             activity.atividade,
             activity.motivo
@@ -932,7 +1061,7 @@ function recordActivity(activity, index) {
         <span>${String(index + 1).padStart(2, "0")}</span>
         <div>
           <strong>${escapeHtml(activity.atividade)}</strong>
-          <small>${escapeHtml(activity.responsavel || "Sem responsável técnico")} · ${formatActivityDates(activity)}</small>
+          <small>${escapeHtml(activity.ordemServico || "OS não informada")} · ${escapeHtml(activity.responsavel || "Sem responsável técnico")} · ${formatActivityDates(activity)}</small>
         </div>
         <span class="activity-status ${waiting ? "is-waiting" : "is-complete"}">${waiting ? "Em espera" : "Concluída"}</span>
       </div>
@@ -1248,6 +1377,16 @@ function validateActivities() {
     fields.atividade.value.trim()
   );
   if (!filled.length) throw new Error("Cadastre ao menos um problema ou serviço executado.");
+
+  const missingOrder = filled.find(
+    ({ fields }) =>
+      !fields.ordemServico.value.trim() && !reportForm.elements.ordemServico.value.trim()
+  );
+  if (missingOrder) {
+    missingOrder.card.classList.add("is-open");
+    missingOrder.fields.ordemServico.focus();
+    throw new Error("Informe a OS da ocorrência ou a OS geral do formulário.");
+  }
 
   const waitingWithoutReason = filled.find(
     ({ fields }) =>
